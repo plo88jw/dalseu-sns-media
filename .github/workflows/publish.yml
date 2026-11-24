@@ -1,30 +1,38 @@
-name: publish
+name: sns-publish
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *"   # GitHub 예약은 자주 건너뛴다(실측) → 외부 호출기가 workflow_dispatch 로 깨운다
   workflow_dispatch:
     inputs:
       mode:
         description: "run | once | dry | selftest"
-        default: "selftest"
+        default: "run"
 permissions:
   contents: write
 concurrency:
-  group: publish
+  group: sns-publish
   cancel-in-progress: false
 jobs:
   publish:
     runs-on: ubuntu-latest
     timeout-minutes: 9
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4 (커밋 고정)
+        with:
+          ref: main  # 대기하던 실행이 낡은 상태 파일을 쓰지 않게 항상 최신 main
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
+        with:
+          python-version: "3.12"
+      - name: 암호화 라이브러리
+        run: pip install --quiet cryptography==50.0.2
       - name: git identity
         run: |
-          git config user.name "publisher-bot"
-          git config user.email "publisher-bot@users.noreply.github.com"
-      - name: publish
+          git config user.name "sns-publisher-bot"
+          git config user.email "sns-publisher-bot@users.noreply.github.com"
+      - name: 게시
         env:
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
           THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          CLOUD_SYNC_KEY: ${{ secrets.CLOUD_SYNC_KEY }}
           PYTHONIOENCODING: utf-8
         run: python publisher/publish.py "${{ github.event.inputs.mode || 'run' }}"
