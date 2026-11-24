@@ -1,1 +1,6 @@
-{}
+{
+ "D-039-thread": {
+  "status": "skipped",
+  "note": "슬롯 3시간 초과"
+ }
+}
