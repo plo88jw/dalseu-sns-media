@@ -1,20 +1,4 @@
 {
- "D-041-thread": {
-  "kind": "thread",
-  "slot": "2026-11-24 20:40",
-  "text": "전기요금 동결 끝날까? 10원 오르면 월 3,000원\n\n14분기째 동결인데\n한전 3분기 영업이익은 70.9% 줄었어\n오른다는 발표는 아직 없음\n\nkWh당 10원 오른다고 가정하면\n월 300kWh 쓰는 집은\n3,000원 더 내는 계산(부가세 전)\n\n인상 확정 아니고 가정이야\n계산 근거는 타래에 적어둠",
-  "replies": [],
-  "followup": {
-   "text": "근거랑 전체 정리는 블로그에 있어\n{url}",
-   "link_source": {
-    "rss": "https://rss.blog.naver.com/todaystrend.xml",
-    "keyword": "전기요금 동결 끝날까",
-    "not_before": "2026-11-22 08:20"
-   },
-   "delay_sec": 5
-  },
-  "approved": true
- },
  "S-040": {
   "kind": "reel",
   "slot": "2026-11-24 21:00",
