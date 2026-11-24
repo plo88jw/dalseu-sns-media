@@ -10,7 +10,7 @@
   - 게시 직전에 state 에 posting 을 먼저 커밋해 두어, 실행이 끊겨도 중복 게시하지 않는다(posting 이면 사람이 확인)
   - 릴스: 캡션에 블로그 글 주소, 커버·커버확인 필수 / 스레드: 글자수·자리표시자 점검, 링크 답글은 글 주소 HTTP 200 확인 뒤에만
 """
-import datetime, email.utils, json, os, re, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
+import base64, datetime, email.utils, hashlib, json, os, re, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -40,9 +40,26 @@ def log(msg):
     print(f"[{now():%m-%d %H:%M:%S}] {msg}", flush=True)
 
 
+MAGIC = "SNS1:"
+
+
+def _fernet():
+    from cryptography.fernet import Fernet
+    key = os.environ.get("CLOUD_SYNC_KEY", "")
+    if not key:
+        raise Fail("CLOUD_SYNC_KEY 시크릿이 없어 큐를 풀 수 없습니다")
+    return Fernet(base64.urlsafe_b64encode(hashlib.sha256(b"sns-cloud-v1:" + key.encode()).digest()))
+
+
 def load(p, default):
+    """공개 저장소라 queue.json·state.json 은 암호화(SNS1: 접두)돼 있다. 접두가 없으면 평문(설정 전 상태)."""
     try:
-        return json.loads(p.read_text(encoding="utf-8"))
+        t = p.read_text(encoding="utf-8")
+        if t.startswith(MAGIC):
+            t = _fernet().decrypt(t[len(MAGIC):].encode()).decode("utf-8")
+        return json.loads(t)
+    except Fail:
+        raise
     except Exception:
         return default
 
@@ -79,7 +96,10 @@ def sh(*cmd):
 
 
 def commit_state(state, msg):
-    STATE.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
+    body = json.dumps(state, ensure_ascii=False, indent=1)
+    if os.environ.get("CLOUD_SYNC_KEY"):
+        body = MAGIC + _fernet().encrypt(body.encode("utf-8")).decode()
+    STATE.write_text(body, encoding="utf-8")
     if os.environ.get("GITHUB_ACTIONS") != "true":
         return
     sh("git", "add", "publisher/state.json")
@@ -115,8 +135,34 @@ def check_reel(it):
         raise Fail("커버 미확인")
 
 
+def already_posted_reel(it):
+    try:
+        for m in ig("GET", f"{IG_ID}/media", fields="id,caption", limit="12").get("data", []):
+            if (m.get("caption") or "").strip() == it["caption"].strip():
+                return m["id"]
+    except Fail:
+        pass
+    return None
+
+
+def already_posted_thread(uid, it):
+    try:
+        for m in th("GET", f"{uid}/threads", fields="id,text", limit="20").get("data", []):
+            if (m.get("text") or "").strip() == it["text"].strip():
+                return m["id"]
+    except Fail:
+        pass
+    return None
+
+
 def publish_reel(pid, it, state):
     check_reel(it)
+    dup = already_posted_reel(it)
+    if dup:   # 호출이 겹쳐 같은 글이 이미 올라갔으면 기록만 한다
+        state.setdefault(pid, {}).update(status="published", media_id=dup, published_at=f"{now():%Y-%m-%d %H:%M:%S}", note="중복 방지: 이미 게시돼 있어 기록만")
+        commit_state(state, f"{pid} recorded(existing)")
+        log(f"{pid}: 이미 게시돼 있어 기록만 함 {dup}")
+        return
     used = ig("GET", f"{IG_ID}/content_publishing_limit", fields="quota_usage")["data"][0]["quota_usage"]
     if used >= 20:
         raise Fail(f"24시간 게시량 {used}건")
@@ -209,6 +255,12 @@ def publish_thread(pid, it, state):
     used = th("GET", f"{uid}/threads_publishing_limit", fields="quota_usage").get("data", [{}])[0].get("quota_usage", 0)
     if used >= DAILY_CAP:
         raise Fail(f"24시간 게시량 {used}건")
+    dup = already_posted_thread(uid, it)
+    if dup:
+        state.setdefault(pid, {}).update(status="published", media_id=dup, published_at=f"{now():%Y-%m-%d %H:%M:%S}", note="중복 방지: 이미 게시돼 있어 기록만")
+        commit_state(state, f"{pid} recorded(existing)")
+        log(f"{pid}: 이미 게시돼 있어 기록만 함 {dup}")
+        return
     st = state.setdefault(pid, {})
     st.update(status="posting", started_at=f"{now():%Y-%m-%d %H:%M:%S}")
     commit_state(state, f"{pid} posting")
@@ -325,8 +377,12 @@ def selftest():
     except Exception as e:
         ok = False
         log(f"네이버 RSS 접근 실패: {repr(e)[:80]}")
-    q = load(QUEUE, {})
-    log(f"큐 {len(q)}건, 상태 {len(load(STATE, {}))}건")
+    try:
+        q = load(QUEUE, {})
+        log(f"큐 {len(q)}건, 상태 {len(load(STATE, {}))}건")
+    except Fail as e:
+        log(f"큐 읽기 실패: {e}")
+        sys.exit(1)
     for k, v in sorted(q.items(), key=lambda kv: kv[1].get('slot', '')):
         if v.get("kind") == "reel":
             for f in ("video_url", "cover_url"):
