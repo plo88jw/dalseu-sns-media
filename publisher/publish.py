@@ -396,6 +396,40 @@ def selftest():
     sys.exit(0 if ok else 1)
 
 
+def chain_next():
+    """연쇄 실행: 앞으로 60분 안에 게시할 글(또는 3시간 안에 놓친 글)이 남아 있으면 끝나기 직전에 다음 실행을 스스로 요청한다.
+    외부 호출기·GitHub 예약 실행이 한두 번 빠져도 게시 시각 근처에서는 끊기지 않게 하는 안전장치(GITHUB_TOKEN 의 workflow_dispatch 는 새 실행을 만든다).
+    남은 글이 없으면 연쇄는 멈추고 다음 호출은 외부 호출기가 깨운다."""
+    tok, repo = os.environ.get("GH_TOKEN", ""), os.environ.get("GITHUB_REPOSITORY", "")
+    if os.environ.get("GITHUB_ACTIONS") != "true" or not tok or not repo:
+        return
+    queue, state = load(QUEUE, {}), load(STATE, {})
+    n = now()
+    soon = False
+    for pid, it in queue.items():
+        if not it.get("approved") or not it.get("slot"):
+            continue
+        st = state.get(pid, {})
+        if st.get("status") in ("published", "skipped", "posting") and not (it.get("kind") == "thread" and it.get("followup") and not st.get("followup_done")):
+            continue
+        slot = datetime.datetime.strptime(it["slot"], "%Y-%m-%d %H:%M").replace(tzinfo=KST)
+        if slot - n <= datetime.timedelta(minutes=60) and n - slot <= LATE:
+            soon = True
+            break
+    if not soon:
+        log("연쇄 실행 없음: 60분 안에 처리할 글이 없음")
+        return
+    req = urllib.request.Request(f"https://api.github.com/repos/{repo}/actions/workflows/publish.yml/dispatches",
+                                 data=json.dumps({"ref": "main", "inputs": {"mode": "run", "source": "chain"}}).encode(),
+                                 headers={"Authorization": f"Bearer {tok}", "Accept": "application/vnd.github+json",
+                                          "X-GitHub-Api-Version": "2022-11-28", "Content-Type": "application/json", "User-Agent": "sns-chain"}, method="POST")
+    try:
+        urllib.request.urlopen(req, timeout=30)
+        log("연쇄 실행: 다음 실행 요청 완료")
+    except Exception as e:
+        log(f"연쇄 실행 요청 실패: {repr(e)[:100]}")
+
+
 def main():
     if MODE == "selftest":
         selftest()
@@ -408,6 +442,8 @@ def main():
         if time.time() >= end:
             break
         time.sleep(POLL)
+    if MODE == "run":
+        chain_next()
 
 
 if __name__ == "__main__":
