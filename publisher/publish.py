@@ -319,6 +319,12 @@ def selftest():
         except Fail as e:
             ok = False
             log(f"{name} 토큰 오류: {e}")
+    try:
+        x = urllib.request.urlopen(urllib.request.Request("https://rss.blog.naver.com/todaystrend.xml", headers=UA), timeout=30).read().decode("utf-8", "ignore")
+        log(f"네이버 RSS 접근 정상(글 {x.count('<item>')}개)")
+    except Exception as e:
+        ok = False
+        log(f"네이버 RSS 접근 실패: {repr(e)[:80]}")
     q = load(QUEUE, {})
     log(f"큐 {len(q)}건, 상태 {len(load(STATE, {}))}건")
     for k, v in sorted(q.items(), key=lambda kv: kv[1].get('slot', '')):
