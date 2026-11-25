@@ -28,7 +28,7 @@
   "note": "슬롯 3시간 초과"
  },
  "D-029-thread": {
-  "last_error": "11-26 00:03 publish: THREADS_ACCESS_TOKEN 시크릿이 없습니다"
+  "last_error": "11-26 00:08 publish: THREADS_ACCESS_TOKEN 시크릿이 없습니다"
  },
  "D-048-thread": {
   "last_error": "11-26 00:03 publish: THREADS_ACCESS_TOKEN 시크릿이 없습니다"
