@@ -24,5 +24,8 @@
  },
  "S-042": {
   "last_error": "11-25 21:08 publish: IG_ACCESS_TOKEN 시크릿이 없습니다"
+ },
+ "D-029-thread": {
+  "last_error": "11-25 21:10 publish: THREADS_ACCESS_TOKEN 시크릿이 없습니다"
  }
 }
