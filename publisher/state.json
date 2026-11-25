@@ -21,5 +21,8 @@
   "last_error": "11-25 20:59 publish: IG_ACCESS_TOKEN 시크릿이 없습니다",
   "status": "skipped",
   "note": "슬롯 3시간 초과"
+ },
+ "S-042": {
+  "last_error": "11-25 21:00 publish: IG_ACCESS_TOKEN 시크릿이 없습니다"
  }
 }
