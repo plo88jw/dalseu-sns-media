@@ -23,7 +23,7 @@
   "note": "슬롯 3시간 초과"
  },
  "S-042": {
-  "last_error": "11-25 23:02 publish: IG_ACCESS_TOKEN 시크릿이 없습니다"
+  "last_error": "11-25 23:06 publish: IG_ACCESS_TOKEN 시크릿이 없습니다"
  },
  "D-029-thread": {
   "last_error": "11-25 23:02 publish: THREADS_ACCESS_TOKEN 시크릿이 없습니다"
