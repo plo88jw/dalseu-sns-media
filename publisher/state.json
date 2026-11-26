@@ -55,5 +55,9 @@
  "S-043": {
   "status": "skipped",
   "note": "슬롯 3시간 초과"
+ },
+ "D-031-thread": {
+  "status": "skipped",
+  "note": "슬롯 3시간 초과"
  }
 }
