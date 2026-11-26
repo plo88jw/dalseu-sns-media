@@ -66,5 +66,8 @@
  },
  "D-037-thread": {
   "last_error": "11-27 00:40 publish: THREADS_ACCESS_TOKEN 시크릿이 없습니다"
+ },
+ "D-038-thread": {
+  "last_error": "11-27 00:40 publish: THREADS_ACCESS_TOKEN 시크릿이 없습니다"
  }
 }
