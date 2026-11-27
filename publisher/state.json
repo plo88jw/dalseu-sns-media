@@ -73,5 +73,8 @@
   "last_error": "11-27 01:37 publish: THREADS_ACCESS_TOKEN 시크릿이 없습니다",
   "status": "skipped",
   "note": "슬롯 3시간 초과"
+ },
+ "S-037": {
+  "last_error": "11-27 09:02 publish: IG_ACCESS_TOKEN 시크릿이 없습니다"
  }
 }
